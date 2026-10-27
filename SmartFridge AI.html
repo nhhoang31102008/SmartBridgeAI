@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartFridge AI — Trợ lý tủ lạnh thông minh</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root {
+  --site-primary: #26734d;
+  --site-on-primary: #ffffff;
+  --site-secondary: #f4a261;
+  --site-on-secondary: #302014;
+  --site-background: #f6f8f2;
+  --site-on-background: #1d3025;
+  --site-font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --site-font-heading: Inter, ui-sans-serif, system-ui, sans-serif;
+  --site-heading-scale: 1;
+  --site-spacing-scale: 1;
+  --site-radius-scale: 1;
+  --site-decoration-opacity: 1;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: var(--site-font-body); font-size: 18px; background: light-dark(#f6f8f2,#111b16); color: light-dark(#1d3025,#e6f2e9); }
+#app { min-height: 100vh; width: 100%; border-radius: 0; background-color: light-dark(var(--site-background),#111b16); color: light-dark(var(--site-on-background),#e6f2e9); }
+h1,h2,h3 { font-family: var(--site-font-heading); }
+.surface { background: light-dark(#ffffff,#1b2921); border: 1px solid light-dark(#e0e8dc,#33483a); border-radius: calc(22px * var(--site-radius-scale)); }
+.soft { background: light-dark(#eff6ec,#22352a); }
+.muted { color: light-dark(#627466,#b0c1b5); }
+.brand { background: var(--site-primary); color: var(--site-on-primary); }
+.brand-soft { background: light-dark(#e5f3e8,#203c2c); color: light-dark(#216541,#b6e9c6); }
+.orange-soft { background: light-dark(#fff0df,#493322); color: light-dark(#9c4e14,#ffd1a2); }
+.btn { border-radius: 14px; padding: 12px 17px; font-weight: 750; font-size: 18px; transition: transform .15s, opacity .15s; }
+.btn:active { transform: scale(.98); }
+.btn-primary { background: var(--site-primary); color: var(--site-on-primary); }
+.btn-secondary { background: light-dark(#edf4ea,#2b3d31); color: light-dark(#284f38,#e2f1e5); border: 1px solid light-dark(#d8e6d5,#3a5141); }
+.field { width:100%; border:1px solid light-dark(#d5e0d3,#405548); background:light-dark(#fff,#15221a); border-radius:12px; padding:12px 14px; font-size:18px; outline:none; color:inherit; }
+.field:focus { border-color:#4d9b6b; box-shadow:0 0 0 3px #4d9b6b30; }
+.nav-btn { padding: 10px 13px; border-radius: 12px; color: light-dark(#526657,#b4c8b9); font-weight: 700; white-space:nowrap; }
+.nav-btn.active { background:light-dark(#e5f3e8,#254331); color:light-dark(#216541,#c3f0d0); }
+.ingredient { display:flex; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid light-dark(#e8eee5,#304337); }
+.ingredient:last-child { border-bottom:0; }
+.food-icon { width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:light-dark(#eff6ec,#2a3c30);font-size:25px;flex-shrink:0; }
+.pill { font-size:15px;font-weight:800;padding:5px 9px;border-radius:99px;white-space:nowrap; }
+.pill-red { background:light-dark(#fee2e2,#552b2b);color:light-dark(#b42318,#ffb7b0); }
+.pill-yellow { background:light-dark(#fff2c2,#514523);color:light-dark(#8b5b00,#ffdc82); }
+.pill-green { background:light-dark(#e2f5e6,#203f2b);color:light-dark(#277345,#a9e9b8); }
+.stat-number { font-size:clamp(27px,3vw,36px);font-weight:850;letter-spacing:-1px;line-height:1.2; }
+.scan-zone { border:2px dashed light-dark(#9fc7a8,#466e52);background:light-dark(#f0f8ef,#1b3023);border-radius:20px;min-height:220px;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative; }
+.scan-line { position:absolute;left:8%;right:8%;height:3px;background:#8ee4a6;box-shadow:0 0 18px #63d982;animation:scan 1.7s ease-in-out infinite; }
+@keyframes scan {0%{top:15%;opacity:.35}50%{top:80%;opacity:1}100%{top:15%;opacity:.35}}
+.hidden { display:none !important; }
+.recipe-card { border:1px solid light-dark(#e0e8dc,#33483a);border-radius:18px;overflow:hidden;background:light-dark(#fff,#1b2921); }
+.recipe-art { min-height:94px;display:flex;align-items:center;justify-content:center;font-size:48px;background:linear-gradient(135deg,#e9f5e5,#fff1dc); }
+@media (max-width:640px) { body{font-size:18px}.surface{border-radius:18px}.mobile-stack{grid-template-columns:1fr!important}.nav-btn{font-size:16px;padding:9px 10px}.btn{width:100%}.scan-zone{min-height:190px} }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="sticky top-0 z-20 border-b backdrop-blur-md" style="background:light-dark(#f6f8f2ee,#111b16ee);border-color:light-dark(#e0e8dc,#33483a)">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="brand w-12 h-12 rounded-2xl grid place-items-center text-2xl flex-shrink-0">🥬</div>
+        <div class="min-w-0"><div class="font-black text-xl sm:text-2xl tracking-tight">SmartFridge <span style="color:#e98b3b">AI</span></div><div class="text-sm muted">Tủ lạnh gọn · Bữa ăn ngon · Ít lãng phí</div></div>
+      </div>
+      <button class="btn btn-primary hidden sm:block" onclick="openScanner()">＋ Quét nguyên liệu</button>
+      <button class="btn btn-primary sm:hidden" onclick="openScanner()" aria-label="Quét nguyên liệu">＋ Quét</button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <section class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-7">
+      <div><p class="font-bold text-sm uppercase tracking-widest mb-2" style="color:#df8740">THỨ HAI, BẾP NHÀ MÌNH</p><h1 class="text-3xl sm:text-4xl font-black tracking-tight mb-2">Chào bạn, hôm nay ăn gì? 👋</h1><p class="muted">Tận dụng nguyên liệu sẵn có, để mỗi món ăn đều đáng giá.</p></div>
+      <div class="surface px-4 py-3 flex items-center gap-3"><span class="text-3xl">🌱</span><div><div class="font-extrabold">Bếp xanh mỗi ngày</div><div class="text-sm muted">Tiết kiệm thực phẩm bắt đầu từ hôm nay</div></div></div>
+    </section>
+
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-7">
+      <div class="surface p-4 sm:p-5"><div class="flex items-center justify-between mb-3"><span class="muted text-base">Trong tủ lạnh</span><span class="text-2xl">🧊</span></div><div class="stat-number" id="statTotal">12</div><div class="text-sm muted mt-2">loại nguyên liệu</div></div>
+      <div class="surface p-4 sm:p-5"><div class="flex items-center justify-between mb-3"><span class="muted text-base">Sắp hết hạn</span><span class="text-2xl">⏰</span></div><div class="stat-number" id="statExpiry" style="color:#df694f">3</div><div class="text-sm muted mt-2">cần ưu tiên dùng</div></div>
+      <div class="surface p-4 sm:p-5"><div class="flex items-center justify-between mb-3"><span class="muted text-base">Món có thể nấu</span><span class="text-2xl">🍲</span></div><div class="stat-number" id="statRecipes">6</div><div class="text-sm muted mt-2">gợi ý từ nguyên liệu</div></div>
+      <div class="surface p-4 sm:p-5"><div class="flex items-center justify-between mb-3"><span class="muted text-base">Danh sách đi chợ</span><span class="text-2xl">🛒</span></div><div class="stat-number" id="statShopping">4</div><div class="text-sm muted mt-2">món cần bổ sung</div></div>
+    </section>
+
+    <nav class="flex gap-2 overflow-x-auto pb-2 mb-6" aria-label="Điều hướng">
+      <button class="nav-btn active" data-tab="overview" onclick="showTab('overview',this)">🏠 Tổng quan</button>
+      <button class="nav-btn" data-tab="inventory" onclick="showTab('inventory',this)">🧊 Tủ lạnh</button>
+      <button class="nav-btn" data-tab="scanner" onclick="showTab('scanner',this)">📸 AI Scanner</button>
+      <button class="nav-btn" data-tab="recipes" onclick="showTab('recipes',this)">🍳 Thực đơn AI</button>
+      <button class="nav-btn" data-tab="shopping" onclick="showTab('shopping',this)">🛒 Đi chợ</button>
+    </nav>
+
+    <section id="tab-overview" class="tab-panel">
+      <div class="grid lg:grid-cols-5 gap-5">
+        <div class="surface p-5 sm:p-6 lg:col-span-3">
+          <div class="flex flex-wrap items-start justify-between gap-3 mb-4"><div><h2 class="text-2xl font-extrabold">Nguyên liệu cần chú ý</h2><p class="muted text-base mt-1">Dùng trước những món gần đến hạn nhé.</p></div><button class="btn btn-secondary" onclick="showTab('inventory')">Xem tất cả →</button></div>
+          <div id="expiryPreview"></div>
+        </div>
+        <div class="surface p-5 sm:p-6 lg:col-span-2">
+          <div class="flex items-center justify-between mb-2"><h2 class="text-2xl font-extrabold">Gợi ý hôm nay</h2><span class="text-2xl">✨</span></div>
+          <p class="muted text-base mb-4">Món nhanh từ nguyên liệu có sẵn.</p>
+          <div id="quickRecipes" class="space-y-3"></div>
+          <button class="btn btn-primary w-full mt-5" onclick="generateRecipes()">✨ Phân tích & gợi ý thực đơn</button>
+        </div>
+      </div>
+      <div class="grid md:grid-cols-2 gap-5 mt-5">
+        <div class="surface p-5 sm:p-6"><div class="flex items-center justify-between mb-4"><h2 class="text-2xl font-extrabold">Tình trạng kho</h2><span class="text-2xl">📊</span></div><div id="categoryBars" class="space-y-4"></div></div>
+        <div class="surface p-5 sm:p-6"><div class="flex items-center justify-between mb-3"><h2 class="text-2xl font-extrabold">Danh sách đi chợ</h2><span class="text-2xl">🛍️</span></div><p class="muted text-base mb-3">Tự động lọc món đã hết hoặc sắp hết.</p><div id="shoppingPreview"></div><button class="btn btn-secondary w-full mt-4" onclick="showTab('shopping')">Mở danh sách đi chợ →</button></div>
+      </div>
+    </section>
+
+    <section id="tab-inventory" class="tab-panel hidden">
+      <div class="surface p-5 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-5"><div><h2 class="text-2xl sm:text-3xl font-black">Kho tủ lạnh</h2><p class="muted mt-1">Theo dõi số lượng và hạn sử dụng của từng nguyên liệu.</p></div><button class="btn btn-primary" onclick="openItemModal()">＋ Thêm nguyên liệu</button></div>
+        <div class="grid sm:grid-cols-3 gap-3 mb-4"><input id="inventorySearch" class="field sm:col-span-2" placeholder="🔎 Tìm nguyên liệu..." oninput="renderInventory()"><select id="categoryFilter" class="field" onchange="renderInventory()"><option value="">Tất cả danh mục</option><option>Rau củ</option><option>Thịt cá</option><option>Chai lọ</option><option>Gia vị</option><option>Khác</option></select></div>
+        <div class="overflow-x-auto"><table class="w-full text-left min-w-[650px]"><thead><tr class="text-base muted border-b" style="border-color:light-dark(#e0e8dc,#33483a)"><th class="py-3 pr-3">Nguyên liệu</th><th class="py-3 pr-3">Số lượng</th><th class="py-3 pr-3">Danh mục</th><th class="py-3 pr-3">Hạn sử dụng</th><th class="py-3">Thao tác</th></tr></thead><tbody id="inventoryRows"></tbody></table></div>
+        <p class="text-sm muted mt-4">Lưu ý: dữ liệu mẫu và trạng thái hạn sử dụng được mô phỏng trên trình duyệt này.</p>
+      </div>
+    </section>
+
+    <section id="tab-scanner" class="tab-panel hidden">
+      <div class="grid lg:grid-cols-5 gap-5">
+        <div class="surface p-5 sm:p-6 lg:col-span-3"><div class="mb-5"><h2 class="text-2xl sm:text-3xl font-black">AI Scanner <span class="text-xl">📸</span></h2><p class="muted mt-1">Tải ảnh tủ lạnh hoặc chụp nhanh nguyên liệu của bạn.</p></div>
+          <div class="scan-zone" id="scanZone"><div class="text-center p-5" id="scanPlaceholder"><div class="text-5xl mb-3">🧺</div><div class="font-extrabold text-xl">Đưa nguyên liệu vào khung hình</div><p class="muted text-base mt-2 mb-4">Chọn ảnh từ thiết bị để mô phỏng nhận diện AI.</p><label class="btn btn-primary inline-block cursor-pointer">📁 Chọn ảnh<input id="imageInput" type="file" accept="image/*" capture="environment" class="hidden" onchange="previewImage(event)"></label></div><img id="previewImg" class="hidden w-full h-full object-contain max-h-80" alt="Ảnh nguyên liệu đã chọn"><div id="scanLine" class="scan-line hidden"></div></div>
+          <div class="flex flex-col sm:flex-row gap-3 mt-4"><button class="btn btn-primary flex-1" onclick="runScan()">✨ Phân tích hình ảnh</button><button class="btn btn-secondary" onclick="resetScan()">↻ Chọn ảnh khác</button></div>
+          <div id="scanStatus" class="hidden mt-4 p-4 rounded-xl brand-soft font-bold" role="status"></div>
+          <div id="scanResults" class="hidden mt-5"><h3 class="text-xl font-extrabold mb-3">Kết quả nhận diện</h3><div id="detectedItems" class="flex flex-wrap gap-2"></div><h3 class="text-xl font-extrabold mt-5 mb-3">🛒 Cần mua bổ sung</h3><div id="scanShopping"></div><h3 class="text-xl font-extrabold mt-5 mb-3">🍽️ 3 món có thể nấu</h3><div id="scanMeals" class="space-y-2"></div></div>
+        </div>
+        <div class="surface p-5 sm:p-6 lg:col-span-2"><h3 class="text-2xl font-extrabold mb-2">Kết nối AI</h3><p class="muted text-base mb-4">Chọn chế độ trải nghiệm. Demo hoạt động ngay, không cần API key.</p><div class="brand-soft rounded-xl p-4 mb-4"><div class="font-extrabold flex items-center gap-2"><span>●</span> Chế độ mô phỏng AI</div><p class="text-base mt-1">Tạo kết quả minh họa từ dữ liệu mẫu, không gửi ảnh lên máy chủ.</p></div><label class="font-bold block mb-2" for="apiKey">API Key (tùy chọn)</label><input id="apiKey" class="field" type="password" placeholder="Dán API key của bạn..."><p class="muted text-sm mt-2 mb-4">Bản demo này chưa gọi API bên ngoài. Không nhập khóa bí mật vào môi trường công khai.</p><button class="btn btn-secondary w-full" onclick="toggleKey()">👁 Hiện / ẩn API Key</button><div class="soft rounded-xl p-4 mt-5"><div class="font-extrabold mb-2">AI có thể hỗ trợ</div><ul class="space-y-2 text-base"><li>🥦 Phân loại rau củ</li><li>🐟 Nhận diện thịt, cá</li><li>🧂 Phát hiện gia vị sắp hết</li><li>🍳 Gợi ý món ăn theo nguyên liệu</li></ul></div></div>
+      </div>
+    </section>
+
+    <section id="tab-recipes" class="tab-panel hidden">
+      <div class="surface p-5 sm:p-6 mb-5"><div class="flex flex-col md:flex-row md:items-center justify-between gap-4"><div><h2 class="text-2xl sm:text-3xl font-black">Thực đơn thông minh</h2><p class="muted mt-1">Ưu tiên nguyên liệu gần hết hạn và món nấu trong 30 phút.</p></div><button class="btn btn-primary" onclick="generateRecipes()">✨ Phân tích nguyên liệu & Gợi ý thực đơn</button></div><div class="grid sm:grid-cols-3 gap-3 mt-5"><label><span class="block font-bold mb-2">Thời gian nấu</span><select id="cookTime" class="field"><option value="30">Dưới 30 phút</option><option value="15">Dưới 15 phút</option></select></label><label><span class="block font-bold mb-2">Phong cách món</span><select id="foodStyle" class="field"><option value="all">Món Việt dễ làm</option><option value="healthy">Thanh đạm, nhiều rau</option><option value="quick">Nhanh gọn</option></select></label><label><span class="block font-bold mb-2">Số người ăn</span><select id="servings" class="field"><option>2 người</option><option>1 người</option><option>3–4 người</option></select></label></div><div id="recipeLoading" class="hidden mt-5 brand-soft rounded-xl p-4 font-bold"><span class="inline-block animate-spin mr-2">✳</span> Đang phân tích nguyên liệu và ghép công thức...</div></div>
+      <div id="recipeResults" class="grid md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </section>
+
+    <section id="tab-shopping" class="tab-panel hidden">
+      <div class="surface p-5 sm:p-6"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5"><div><h2 class="text-2xl sm:text-3xl font-black">Danh sách đi chợ thông minh</h2><p class="muted mt-1">Đánh dấu khi đã mua. Nguyên liệu trùng lặp được gộp lại.</p></div><button class="btn btn-secondary" onclick="addShoppingItem()">＋ Thêm món cần mua</button></div><div class="flex items-center justify-between gap-3 mb-4"><div class="font-bold" id="shoppingCount">0 món cần mua</div><button class="text-base font-bold underline" style="color:#df8740" onclick="clearBought()">Xóa món đã mua</button></div><div id="shoppingList" class="space-y-2"></div><div class="mt-5 soft rounded-xl p-4"><div class="font-extrabold">💡 Mẹo đi chợ</div><p class="text-base mt-1">Kiểm tra số lượng trong tủ trước khi mua. Các gia vị đã có đủ sẽ không xuất hiện trong danh sách đề xuất.</p></div></div>
+    </section>
+
+    <footer class="text-center py-8 muted text-sm">SmartFridge AI · Bản demo giao diện tương tác · Dữ liệu được lưu trong phiên trình duyệt</footer>
+  </main>
+</div>
+
+<div id="itemModal" class="hidden fixed inset-0 z-40 p-4 items-center justify-center" style="background:#102016aa">
+ <div class="surface w-full max-w-lg p-6 shadow-2xl"><div class="flex items-center justify-between mb-5"><h3 class="text-2xl font-black" id="modalTitle">Thêm nguyên liệu</h3><button class="text-2xl" onclick="closeItemModal()">×</button></div><form id="itemForm" onsubmit="saveItem(event)" class="space-y-4"><input id="itemId" type="hidden"><label class="block"><span class="font-bold block mb-2">Tên nguyên liệu</span><input id="itemName" class="field" required placeholder="Ví dụ: Cà chua"></label><div class="grid grid-cols-2 gap-3"><label><span class="font-bold block mb-2">Số lượng</span><input id="itemQty" class="field" required placeholder="3 quả"></label><label><span class="font-bold block mb-2">Danh mục</span><select id="itemCategory" class="field"><option>Rau củ</option><option>Thịt cá</option><option>Chai lọ</option><option>Gia vị</option><option>Khác</option></select></label></div><label class="block"><span class="font-bold block mb-2">Hạn sử dụng</span><input id="itemExpiry" type="date" class="field" required></label><div class="flex gap-3 pt-2"><button type="button" class="btn btn-secondary flex-1" onclick="closeItemModal()">Hủy</button><button class="btn btn-primary flex-1" type="submit">Lưu nguyên liệu</button></div></form></div>
+</div>
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 hidden brand px-5 py-3 rounded-xl shadow-xl font-bold text-base max-w-[90vw] text-center" role="status"></div>
+
+<script>
+const today = new Date(); today.setHours(0,0,0,0);
+const dateOffset = n => { const d = new Date(today); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const daysUntil = date => Math.ceil((new Date(date+'T00:00:00')-today)/86400000);
+let nextId = 100;
+let inventory = [
+ {id:1,name:'Rau cải xanh',qty:'1 bó',category:'Rau củ',expiry:dateOffset(1),icon:'🥬'},
+ {id:2,name:'Cà chua',qty:'4 quả',category:'Rau củ',expiry:dateOffset(2),icon:'🍅'},
+ {id:3,name:'Nấm đùi gà',qty:'200 g',category:'Rau củ',expiry:dateOffset(1),icon:'🍄'},
+ {id:4,name:'Ức gà',qty:'300 g',category:'Thịt cá',expiry:dateOffset(3),icon:'🍗'},
+ {id:5,name:'Trứng gà',qty:'6 quả',category:'Thịt cá',expiry:dateOffset(7),icon:'🥚'},
+ {id:6,name:'Cá hồi',qty:'2 miếng',category:'Thịt cá',expiry:dateOffset(2),icon:'🐟'},
+ {id:7,name:'Sữa tươi',qty:'1 hộp',category:'Chai lọ',expiry:dateOffset(4),icon:'🥛'},
+ {id:8,name:'Nước tương',qty:'1 chai',category:'Gia vị',expiry:dateOffset(90),icon:'🧴'},
+ {id:9,name:'Tỏi',qty:'1 củ',category:'Rau củ',expiry:dateOffset(20),icon:'🧄'},
+ {id:10,name:'Gạo',qty:'1 kg',category:'Khác',expiry:dateOffset(180),icon:'🍚'},
+ {id:11,name:'Dầu ăn',qty:'còn ít',category:'Gia vị',expiry:dateOffset(120),icon:'🫒'},
+ {id:12,name:'Hành lá',qty:'1 nắm',category:'Rau củ',expiry:dateOffset(2),icon:'🌿'}
+];
+let shopping = [
+ {id:1,name:'Muối',qty:'1 gói',checked:false,reason:'Gia vị cơ bản'},
+ {id:2,name:'Hành tây',qty:'2 củ',checked:false,reason:'Nấu canh / xào'},
+ {id:3,name:'Dầu ăn',qty:'1 chai',checked:false,reason:'Sắp hết'},
+ {id:4,name:'Chanh',qty:'3 quả',checked:false,reason:'Nêm món ăn'}
+];
+let recipes = [
+ {name:'Gà xào nấm',emoji:'🍗',time:20,tag:'Giàu đạm',ingredients:['Ức gà','Nấm đùi gà','Tỏi','Nước tương'],steps:['Thái gà thành miếng vừa ăn, ướp với nước tương và tỏi.','Phi thơm tỏi, cho gà vào đảo đến khi gần chín.','Thêm nấm, xào thêm 5–7 phút đến khi gà chín hoàn toàn.']},
+ {name:'Canh cải trứng',emoji:'🥣',time:15,tag:'Thanh đạm',ingredients:['Rau cải xanh','Trứng gà','Gia vị'],steps:['Rửa sạch và cắt rau cải.','Đun sôi nước, nêm gia vị vừa ăn rồi cho rau vào.','Đánh trứng, rót từ từ vào nồi và nấu đến khi trứng chín.']},
+ {name:'Cá hồi áp chảo',emoji:'🐟',time:18,tag:'Nhanh gọn',ingredients:['Cá hồi','Tỏi','Chanh'],steps:['Thấm khô cá, nêm nhẹ muối và tiêu nếu có.','Áp chảo với ít dầu 3–5 phút mỗi mặt tùy độ dày.','Thêm tỏi thơm và dùng cùng chanh; đảm bảo cá chín phù hợp.']},
+ {name:'Trứng xào cà chua',emoji:'🍳',time:10,tag:'Tiết kiệm',ingredients:['Trứng gà','Cà chua'],steps:['Cắt cà chua thành múi nhỏ, đánh tan trứng.','Xào cà chua đến mềm, nêm vừa ăn.','Cho trứng vào đảo nhẹ đến khi chín.']},
+ {name:'Nấm xào tỏi',emoji:'🍄',time:12,tag:'Ít nguyên liệu',ingredients:['Nấm đùi gà','Tỏi','Nước tương'],steps:['Làm sạch nấm, cắt lát vừa ăn.','Phi tỏi, cho nấm vào xào lửa vừa.','Nêm nước tương và đảo đến khi nấm chín.']},
+ {name:'Cải xanh xào tỏi',emoji:'🥬',time:10,tag:'Rau xanh',ingredients:['Rau cải xanh','Tỏi'],steps:['Rửa cải và để ráo.','Phi thơm tỏi, cho cải vào xào nhanh trên lửa lớn.','Nêm vừa ăn, đảo đến khi cải chín nhưng vẫn xanh.']}
+];
+let currentImage = false;
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.remove('hidden');clearTimeout(showToast.timer);showToast.timer=setTimeout(()=>t.classList.add('hidden'),2600);}
+function showTab(name,btn){document.querySelectorAll('.tab-panel').forEach(x=>x.classList.add('hidden'));document.getElementById('tab-'+name).classList.remove('hidden');document.querySelectorAll('.nav-btn').forEach(x=>x.classList.toggle('active',x.dataset.tab===name));if(btn&&btn.dataset)btn.classList.add('active');if(name==='scanner'){} window.scrollTo({top:0,behavior:'smooth'});}
+function openScanner(){showTab('scanner');}
+function expiryMeta(item){const d=daysUntil(item.expiry);if(d<0)return {text:'Quá hạn',cls:'pill-red',sort:0};if(d===0)return {text:'Hết hạn hôm nay',cls:'pill-red',sort:1};if(d<=2)return {text:`Còn ${d} ngày`,cls:d===1?'pill-red':'pill-yellow',sort:2};return {text:new Date(item.expiry+'T00:00:00').toLocaleDateString('vi-VN'),cls:'pill-green',sort:3};}
+function iconFor(cat){return {'Rau củ':'🥦','Thịt cá':'🥩','Chai lọ':'🧃','Gia vị':'🧂','Khác':'📦'}[cat]||'📦';}
+function renderStats(){document.getElementById('statTotal').textContent=inventory.length;document.getElementById('statExpiry').textContent=inventory.filter(x=>daysUntil(x.expiry)<=2).length;document.getElementById('statRecipes').textContent=recipes.length;document.getElementById('statShopping').textContent=shopping.filter(x=>!x.checked).length;}
+function renderExpiry(){const soon=inventory.filter(x=>daysUntil(x.expiry)<=2).sort((a,b)=>daysUntil(a.expiry)-daysUntil(b.expiry));document.getElementById('expiryPreview').innerHTML=soon.length?soon.slice(0,4).map(x=>{const e=expiryMeta(x);return `<div class="ingredient"><div class="food-icon">${x.icon||iconFor(x.category)}</div><div class="flex-1 min-w-0"><div class="font-extrabold">${esc(x.name)}</div><div class="muted text-base">${esc(x.qty)} · ${esc(x.category)}</div></div><span class="pill ${e.cls}">${e.text}</span></div>`}).join(''):'<p class="muted py-5">Tuyệt vời! Không có nguyên liệu nào sắp hết hạn.</p>';}
+function renderRecipes(){document.getElementById('quickRecipes').innerHTML=recipes.slice(0,3).map(r=>`<div class="flex items-center gap-3 p-3 rounded-xl soft"><div class="text-3xl">${r.emoji}</div><div class="flex-1"><div class="font-extrabold">${esc(r.name)}</div><div class="muted text-sm">⏱ ${r.time} phút · ${esc(r.tag)}</div></div></div>`).join('');document.getElementById('recipeResults').innerHTML=recipes.map((r,i)=>`<article class="recipe-card"><div class="recipe-art">${r.emoji}</div><div class="p-4"><div class="flex items-start justify-between gap-2"><h3 class="font-extrabold text-xl">${esc(r.name)}</h3><span class="pill pill-green">⏱ ${r.time} phút</span></div><div class="muted text-base mt-2 mb-3">${esc(r.tag)} · ${document.getElementById('servings')?.value||'2 người'}</div><div class="font-bold mb-1">Nguyên liệu</div><p class="text-base muted mb-3">${r.ingredients.map(esc).join(' · ')}</p><details><summary class="cursor-pointer font-bold" style="color:#28734b">Xem công thức ▾</summary><ol class="list-decimal pl-5 mt-3 space-y-2 text-base">${r.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol></details><button class="btn btn-secondary w-full mt-4" onclick="addRecipeMissing(${i})">＋ Thêm nguyên liệu thiếu</button></div></article>`).join('');}
+function renderBars(){const cats=['Rau củ','Thịt cá','Chai lọ','Gia vị','Khác'];const colors=['#4b9b67','#e8a05a','#6f9bbd','#b19acb','#9ca3af'];document.getElementById('categoryBars').innerHTML=cats.map((c,i)=>{const n=inventory.filter(x=>x.category===c).length;const pct=inventory.length?n/inventory.length*100:0;return `<div><div class="flex justify-between mb-2"><span class="font-bold">${iconFor(c)} ${c}</span><span class="muted">${n} món</span></div><div class="h-3 rounded-full overflow-hidden" style="background:light-dark(#e8eee5,#304337)"><div class="h-full rounded-full" style="width:${pct}%;background:${colors[i]}"></div></div></div>`}).join('');}
+function renderInventory(){const q=(document.getElementById('inventorySearch')?.value||'').toLowerCase();const cat=document.getElementById('categoryFilter')?.value||'';const list=inventory.filter(x=>x.name.toLowerCase().includes(q)&&(!cat||x.category===cat)).sort((a,b)=>daysUntil(a.expiry)-daysUntil(b.expiry));document.getElementById('inventoryRows').innerHTML=list.length?list.map(x=>{const e=expiryMeta(x);return `<tr class="border-b" style="border-color:light-dark(#e8eee5,#304337)"><td class="py-4 pr-3"><div class="flex items-center gap-3"><span class="text-2xl">${x.icon||iconFor(x.category)}</span><span class="font-extrabold">${esc(x.name)}</span></div></td><td class="py-4 pr-3">${esc(x.qty)}</td><td class="py-4 pr-3">${esc(x.category)}</td><td class="py-4 pr-3"><span class="pill ${e.cls}">${e.text}</span></td><td class="py-4"><div class="flex gap-2"><button class="btn btn-secondary !px-3 !py-2" onclick="editItem(${x.id})" aria-label="Sửa ${esc(x.name)}">✏️</button><button class="btn btn-secondary !px-3 !py-2" onclick="deleteItem(${x.id})" aria-label="Xóa ${esc(x.name)}">🗑️</button></div></td></tr>`}).join(''):'<tr><td colspan="5" class="py-8 text-center muted">Không tìm thấy nguyên liệu phù hợp.</td></tr>';renderStats();renderExpiry();renderBars();}
+function renderShopping(){const list=document.getElementById('shoppingList');list.innerHTML=shopping.length?shopping.map(x=>`<label class="flex items-center gap-3 p-4 rounded-xl border cursor-pointer" style="border-color:light-dark(#e0e8dc,#33483a);background:light-dark(#fff,#1b2921)"><input type="checkbox" class="w-5 h-5 accent-green-700" ${x.checked?'checked':''} onchange="toggleShopping(${x.id},this.checked)"><div class="flex-1 min-w-0 ${x.checked?'line-through opacity-50':''}"><div class="font-extrabold">${esc(x.name)}</div><div class="muted text-base">${esc(x.qty)} · ${esc(x.reason||'Thêm thủ công')}</div></div><button type="button" class="text-xl px-2" onclick="event.preventDefault();removeShopping(${x.id})" aria-label="Xóa ${esc(x.name)}">×</button></label>`).join(''):'<div class="py-8 text-center muted">Danh sách trống — bạn đã có đủ mọi thứ! 🌿</div>';document.getElementById('shoppingCount').textContent=shopping.filter(x=>!x.checked).length+' món cần mua';document.getElementById('shoppingPreview').innerHTML=shopping.filter(x=>!x.checked).slice(0,4).map(x=>`<div class="flex items-center gap-3 py-2"><span class="text-xl">🛒</span><span class="flex-1 font-bold">${esc(x.name)}</span><span class="muted text-base">${esc(x.qty)}</span></div>`).join('')||'<p class="muted">Không có món cần mua.</p>';renderStats();}
+function renderAll(){renderInventory();renderShopping();renderRecipes();}
+function openItemModal(id){const item=id?inventory.find(x=>x.id===id):null;document.getElementById('itemForm').reset();document.getElementById('itemId').value=item?.id||'';document.getElementById('modalTitle').textContent=item?'Sửa nguyên liệu':'Thêm nguyên liệu';document.getElementById('itemName').value=item?.name||'';document.getElementById('itemQty').value=item?.qty||'';document.getElementById('itemCategory').value=item?.category||'Rau củ';document.getElementById('itemExpiry').value=item?.expiry||dateOffset(7);const m=document.getElementById('itemModal');m.classList.remove('hidden');m.classList.add('flex');}
+function closeItemModal(){const m=document.getElementById('itemModal');m.classList.add('hidden');m.classList.remove('flex');}
+function editItem(id){openItemModal(id);}
+function saveItem(e){e.preventDefault();const id=Number(document.getElementById('itemId').value);const data={name:document.getElementById('itemName').value.trim(),qty:document.getElementById('itemQty').value.trim(),category:document.getElementById('itemCategory').value,expiry:document.getElementById('itemExpiry').value};if(!data.name||!data.qty||!data.expiry)return;const existing=inventory.find(x=>x.id===id);if(existing)Object.assign(existing,data);else inventory.push({id:nextId++,...data,icon:iconFor(data.category)});closeItemModal();renderAll();showToast(existing?'Đã cập nhật nguyên liệu':'Đã thêm nguyên liệu vào tủ lạnh');}
+function deleteItem(id){const item=inventory.find(x=>x.id===id);if(!item)return;if(!confirm(`Xóa "${item.name}" khỏi tủ lạnh?`))return;inventory=inventory.filter(x=>x.id!==id);renderAll();showToast('Đã xóa nguyên liệu');}
+function toggleShopping(id,checked){const x=shopping.find(a=>a.id===id);if(x)x.checked=checked;renderShopping();}
+function removeShopping(id){shopping=shopping.filter(x=>x.id!==id);renderShopping();}
+function clearBought(){shopping=shopping.filter(x=>!x.checked);renderShopping();showToast('Đã dọn các món đã mua');}
+function addShoppingItem(){const name=prompt('Bạn cần mua thêm gì?');if(!name||!name.trim())return;const existing=shopping.find(x=>x.name.toLowerCase()===name.trim().toLowerCase());if(existing){existing.checked=false;showToast('Món này đã có trong danh sách, đã bỏ đánh dấu mua');}else shopping.push({id:nextId++,name:name.trim(),qty:'1 phần',checked:false,reason:'Thêm thủ công'});renderShopping();}
+function addShoppingUnique(name,qty='1 phần',reason='Gợi ý từ thực đơn'){if(shopping.some(x=>x.name.toLowerCase()===name.toLowerCase()))return;if(inventory.some(x=>x.name.toLowerCase()===name.toLowerCase()))return;shopping.push({id:nextId++,name,qty,checked:false,reason});}
+function addRecipeMissing(i){const r=recipes[i];let n=0;r.ingredients.forEach(name=>{if(!inventory.some(x=>x.name.toLowerCase()===name.toLowerCase())){if(!shopping.some(x=>x.name.toLowerCase()===name.toLowerCase())){addShoppingUnique(name,'1 phần',`Cho món ${r.name}`);n++;}}});renderShopping();showToast(n?`Đã thêm ${n} nguyên liệu còn thiếu`:'Bạn đã có đủ nguyên liệu hoặc món cần mua đã nằm trong danh sách');}
+function generateRecipes(){showTab('recipes');const load=document.getElementById('recipeLoading');load.classList.remove('hidden');document.getElementById('recipeResults').classList.add('opacity-50');setTimeout(()=>{const max=Number(document.getElementById('cookTime').value||30);let result=recipes.filter(r=>r.time<=max);const style=document.getElementById('foodStyle').value;if(style==='healthy')result=result.filter(r=>/cải|canh|nấm/i.test(r.name));if(style==='quick')result=result.filter(r=>r.time<=15);if(!result.length)result=recipes.filter(r=>r.time<=max);result.sort((a,b)=>{const score=r=>r.ingredients.reduce((n,name)=>n+(inventory.some(x=>x.name.toLowerCase().includes(name.toLowerCase())||name.toLowerCase().includes(x.name.toLowerCase()))?1:0),0);return score(b)-score(a)});recipes=result.concat(recipes.filter(r=>!result.includes(r))).slice(0,6);load.classList.add('hidden');document.getElementById('recipeResults').classList.remove('opacity-50');renderRecipes();renderStats();showToast('Đã phân tích xong — đây là gợi ý mô phỏng từ kho hiện tại');},1000);}
+function previewImage(e){const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){showToast('Vui lòng chọn tệp hình ảnh');return;}currentImage=true;const reader=new FileReader();reader.onload=ev=>{const img=document.getElementById('previewImg');img.src=ev.target.result;img.classList.remove('hidden');document.getElementById('scanPlaceholder').classList.add('hidden');};reader.readAsDataURL(f);document.getElementById('scanResults').classList.add('hidden');document.getElementById('scanStatus').classList.add('hidden');}
+function runScan(){const status=document.getElementById('scanStatus');status.classList.remove('hidden');status.textContent='✨ AI đang phân tích hình ảnh...';document.getElementById('scanLine').classList.remove('hidden');document.getElementById('scanResults').classList.add('hidden');setTimeout(()=>{document.getElementById('scanLine').classList.add('hidden');status.textContent='✓ Phân tích mô phỏng hoàn tất! Kết quả dưới đây là dữ liệu minh họa, chưa phải nhận diện ảnh thật.';document.getElementById('scanResults').classList.remove('hidden');const detected=[['🥬','Rau cải xanh','Rau củ'],['🍅','Cà chua','Rau củ'],['🍗','Ức gà','Thịt cá'],['🧴','Nước tương','Chai lọ'],['🧂','Gia vị','Gia vị']];document.getElementById('detectedItems').innerHTML=detected.map(x=>`<span class="pill pill-green">${x[0]} ${x[1]} · ${x[2]}</span>`).join('');const missing=shopping.filter(x=>!x.checked).slice(0,3);document.getElementById('scanShopping').innerHTML=missing.map(x=>`<div class="flex justify-between py-2 border-b" style="border-color:light-dark(#e0e8dc,#33483a)"><span>${esc(x.name)}</span><span class="muted">${esc(x.qty)}</span></div>`).join('')||'<p class="muted">Không cần mua bổ sung.</p>';document.getElementById('scanMeals').innerHTML=recipes.slice(0,3).map(r=>`<div class="soft rounded-xl p-3 flex items-center gap-3"><span class="text-2xl">${r.emoji}</span><div class="flex-1 font-bold">${esc(r.name)}</div><span class="muted text-sm">${r.time} phút</span></div>`).join('');},1500);}
+function resetScan(){currentImage=false;document.getElementById('imageInput').value='';document.getElementById('previewImg').src='';document.getElementById('previewImg').classList.add('hidden');document.getElementById('scanPlaceholder').classList.remove('hidden');document.getElementById('scanResults').classList.add('hidden');document.getElementById('scanStatus').classList.add('hidden');document.getElementById('scanLine').classList.add('hidden');}
+function toggleKey(){const k=document.getElementById('apiKey');k.type=k.type==='password'?'text':'password';}
+renderAll();
+</script>
+</body>
+</html>
